@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Archery Master 3D Pro - Adaptive Skill Arena</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0OCIgZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjQiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIzOCIgZmlsbD0iIzAwMCIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjI4IiBmaWxsPSIjMjU2M2ViIi8+PjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjE4IiBmaWxsPSIjZGMyNjI2Ii8+PjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjgiIGZpbGw9IiNmYmJmMjQiLz48L3N2Zz4=">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            touch-action: none;
+            overflow: hidden;
+            height: 100dvh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        canvas {
+            display: block;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(251,191,36,0.5)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(251,191,36,0.9)); }
+        }
+        .combo-badge {
+            animation: pulseGlow 0.6s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white flex flex-col justify-between">
+
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-2.5 flex justify-between items-center z-20 shadow-xl shrink-0">
+        <div class="flex items-center space-x-2">
+            <span class="text-xl animate-pulse">🎯</span>
+            <h1 class="text-base md:text-xl font-extrabold tracking-wider bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">ARCHERY 3D</h1>
+        </div>
+        <div class="flex items-center space-x-2 md:space-x-3 text-xs md:text-base font-semibold">
+            <div id="comboContainer" class="hidden bg-amber-500/20 px-2.5 py-1 rounded-full border border-amber-500/50 combo-badge text-amber-300">
+                🔥 <span id="comboVal">1</span>x Combo
+            </div>
+            <div class="bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700 shadow-inner flex items-center space-x-1">
+                <span class="text-slate-400 text-[10px] uppercase">Wind:</span>
+                <span id="windVal" class="text-sky-400 font-bold">0.0 m/s</span>
+            </div>
+            <div class="bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700 shadow-inner">
+                <span id="scoreLabelText">Score:</span> <span id="scoreVal" class="text-amber-400 font-bold">0</span> / <span class="text-slate-400 text-xs">150</span>
+            </div>
+            <div class="bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700 shadow-inner flex items-center space-x-1">
+                <span>🪙</span>
+                <span id="coinsVal" class="text-yellow-400 font-bold">0</span>
+            </div>
+            <div class="bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700 shadow-inner">
+                Rnd: <span id="roundVal" class="text-orange-400 font-bold">1</span>/3
+            </div>
+            <div class="bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700 shadow-inner">
+                Arr: <span id="arrowsVal" class="text-sky-400 font-bold">5</span>/5
+            </div>
+        </div>
+    </header>
+
+    <main class="relative flex-1 flex items-center justify-center overflow-hidden bg-gradient-to-b from-sky-300 via-sky-100 to-emerald-600">
+        <canvas id="gameCanvas" class="w-full h-full cursor-crosshair"></canvas>
+
+        <!-- Play Area Floating Menu Button -->
+        <button id="inGameMenuBtn" type="button" onclick="openPauseMenu()" class="absolute top-4 left-4 bg-slate-900/80 hover:bg-slate-800 text-amber-400 border border-slate-700 font-bold px-3 py-1.5 rounded-xl shadow-lg z-20 text-xs md:text-sm transition flex items-center space-x-1.5">
+            <span>☰ Menu</span>
+        </button>
+
+        <!-- AI Status Banner -->
+        <div id="aiStatusBanner" class="absolute top-16 bg-slate-900/80 backdrop-blur-md border border-slate-700 text-slate-200 px-4 py-1.5 rounded-full text-xs font-bold hidden z-20 shadow-lg animate-bounce">
+            🤖 AI Opponent is matching your skill level...
+        </div>
+
+        <!-- Focus Mode Active Button -->
+        <button id="focusBtn" type="button" onclick="triggerFocusMode()" class="absolute top-28 bg-sky-600/90 hover:bg-sky-500 text-white font-bold px-4 py-2 rounded-2xl border border-sky-400 shadow-lg hidden z-20 text-xs md:text-sm transition transform active:scale-95 flex items-center space-x-1.5">
+            <span>👁️ Eagle Eye Focus</span>
+        </button>
+
+        <!-- Start Game Overlay -->
+        <div id="startOverlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center z-30 p-4 text-center overflow-y-auto">
+            <div class="bg-slate-900 border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl max-w-md w-full my-auto">
+                <div class="text-5xl mb-3 animate-bounce">🏹</div>
+                <h2 class="text-2xl md:text-3xl font-black text-amber-400 mb-2">Archery 3D: Skill-Matched AI</h2>
+                <p class="text-slate-300 text-xs md:text-sm mb-5 leading-relaxed">
+                    The AI dynamically adapts to shoot as well as you play! Score 150+ points to win. Boards change color when hit.
+                </p>
+                
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <button type="button" onclick="setGameMode('1P')" id="mode1PBtn" class="py-3 bg-amber-500 text-slate-950 font-extrabold rounded-xl shadow-md transition text-sm border-2 border-amber-400">
+                        👤 1 Player
+                    </button>
+                    <button type="button" onclick="setGameMode('2P')" id="mode2PBtn" class="py-3 bg-slate-800 text-slate-300 font-bold rounded-xl shadow-md transition text-sm border border-slate-700 hover:bg-slate-700">
+                        👥 vs AI Opponent
+                    </button>
+                </div>
+
+                <button id="startBtn" type="button" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold rounded-xl shadow-lg transition transform active:scale-95 text-base md:text-lg">
+                    Enter Range
+                </button>
+            </div>
+        </div>
+
+        <!-- Pause Menu Overlay -->
+        <div id="pauseOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center z-40 p-4 text-center">
+            <div class="bg-slate-900 border border-slate-700 p-6 rounded-3xl shadow-2xl max-w-sm w-full space-y-3">
+                <h2 class="text-2xl font-black text-amber-400">Game Paused</h2>
+                <button type="button" onclick="resumeGame()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl transition">Resume Game</button>
+                <button type="button" onclick="restartToMenu()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-600 transition">Main Menu</button>
+            </div>
+        </div>
+
+        <!-- Round Complete & Upgrade Shop Overlay -->
+        <div id="gameOverOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center z-30 p-4 text-center overflow-y-auto">
+            <div class="bg-slate-900 border border-slate-700 p-5 md:p-6 rounded-3xl shadow-2xl max-w-lg w-full my-auto">
+                <div id="gameOverIcon" class="text-4xl mb-1">🏆</div>
+                <h2 id="gameOverTitle" class="text-xl md:text-2xl font-black text-amber-400 mb-1">Round Complete</h2>
+                <p id="gameOverDesc" class="text-slate-300 text-xs mb-3">Goal: 150+ points achieved! Upgrade your equipment.</p>
+                
+                <div class="bg-slate-800/80 p-2.5 rounded-2xl mb-3 border border-slate-700 grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                        <div id="shopScoreTitle" class="text-[10px] text-slate-400 uppercase tracking-wider">Total Score</div>
+                        <div id="finalScoreVal" class="text-xl font-black text-amber-400">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase tracking-wider">Coins Available</div>
+                        <div id="finalCoinsVal" class="text-xl font-black text-yellow-400">0</div>
+                    </div>
+                </div>
+
+                <!-- Upgrades Shop Section -->
+                <div class="space-y-2 mb-4 text-left">
+                    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pro Archery Armory</div>
+                    
+                    <div class="bg-slate-800/90 border border-slate-700 p-2.5 rounded-xl flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-xs md:text-sm text-sky-300">⚖️ Carbon Stabilizer</div>
+                            <div class="text-[10px] text-slate-400">Reduces wind drift impact</div>
+                        </div>
+                        <button type="button" id="upgradeSwayBtn" onclick="buyUpgrade('sway')" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-lg transition shrink-0">
+                            Upgrade (<span id="costSway">50</span> 🪙)
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-800/90 border border-slate-700 p-2.5 rounded-xl flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-xs md:text-sm text-amber-300">👁️ Eagle Eye Focus</div>
+                            <div class="text-[10px] text-slate-400">Unlocks zero-wind sniper focus mode</div>
+                        </div>
+                        <button type="button" id="upgradeEagleBtn" onclick="buyUpgrade('eagle')" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-lg transition shrink-0">
+                            Upgrade (<span id="costEagle">75</span> 🪙)
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-800/90 border border-slate-700 p-2.5 rounded-xl flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-xs md:text-sm text-emerald-300">⏱️ Pendulum Damper</div>
+                            <div class="text-[10px] text-slate-400">Slows down the swinging pendulum boards</div>
+                        </div>
+                        <button type="button" id="upgradePendulumBtn" onclick="buyUpgrade('pendulum')" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-lg transition shrink-0">
+                            Upgrade (<span id="costPendulum">60</span> 🪙)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="backToMenuBtn" class="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-600 shadow-md transition text-xs md:text-sm">
+                        🏠 Back to Menu
+                    </button>
+                    <button type="button" id="restartBtn" class="py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-extrabold rounded-xl shadow-lg transition text-xs md:text-sm">
+                        Next Level ➡️
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Score Toast Notification -->
+        <div id="scorePopup" class="absolute top-1/4 left-1/2 pointer-events-none transform -translate-x-1/2 opacity-0 transition-all duration-500 text-2xl md:text-3xl font-black drop-shadow-2xl z-20">
+            +100 BULLSEYE!
+        </div>
+    </main>
+
+    <footer id="gameFooter" class="bg-slate-900/90 backdrop-blur-md border-t border-slate-800 px-4 py-2 text-center text-[11px] md:text-xs text-slate-400 z-20 flex justify-center space-x-4 shrink-0">
+        <span>🖱️ Drag back to draw bowstring[span_1](start_span)[span_1](end_span)</span>
+        <span>🤖 AI skill matches your performance! Boards change color on hit.</span>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreValEl = document.getElementById('scoreVal');
+        const scoreLabelText = document.getElementById('scoreLabelText');
+        const coinsValEl = document.getElementById('coinsVal');
+        const arrowsValEl = document.getElementById('arrowsVal');
+        const roundValEl = document.getElementById('roundVal');
+        const windValEl = document.getElementById('windVal');
+        const startOverlay = document.getElementById('startOverlay');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const gameFooter = document.getElementById('gameFooter');
+        const focusBtn = document.getElementById('focusBtn');
+        const aiStatusBanner = document.getElementById('aiStatusBanner');
+        const comboContainer = document.getElementById('comboContainer');
+        const comboValEl = document.getElementById('comboVal');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const finalScoreVal = document.getElementById('finalScoreVal');
+        const finalCoinsVal = document.getElementById('finalCoinsVal');
+        const gameOverTitle = document.getElementById('gameOverTitle');
+        const gameOverDesc = document.getElementById('gameOverDesc');
+        const scorePopup = document.getElementById('scorePopup');
+
+        let gameMode = '1P';
+        let currentPlayer = 1;
+        let p1Score = 0;
+        let aiScore = 0;
+        let p1ShotsTaken = 0;
+        let coins = 100;
+        let arrowsLeft = 5;
+        let round = 1;
+        let gameActive = false;
+        let isPaused = false;
+        let wind = 0;
+        let comboStreak = 0;
+        let screenShakeFrames = 0;
+
+        let upgrades = { swayLevel: 0, eagleLevel: 0, pendulumLevel: 0 };
+        let upgradeCosts = { sway: 50, eagle: 75, pendulum: 60 };
+
+        let isFocusActive = false;
+        let focusTimer = 0;
+
+        let isDrawing = false;
+        let drawPower = 0;
+        let maxDrawDistance = 180;
+        let currentPullPos = { x: 0, y: 0 };
+
+        let coaxOffsetX = 0;
+        let coaxOffsetY = 0;
+        let inputTargetOffsetX = 0;
+        let inputTargetOffsetY = 0;
+
+        let time = 0;
+
+        // Target 1: Static Center Board
+        let target3D = {
+            x: 0,
+            y: -110,
+            radius: 52,
+            distance: 85,
+            hitType: null 
+        };
+
+        // Target 2 & 3: Two Moving Boards
+        let movingTargets = [
+            { x: -220, y: 0, vx: 1.5, radius: 32, hitType: null },
+            { x: 220,  y: 0, vx: -1.7, radius: 32, hitType: null }
+        ];
+
+        // Target 4 & 5: Two Swinging Pendulum Boards
+        let pendulums = [
+            { angle: 0, length: 110, radius: 36, speed: 1.1, hitType: null },
+            { angle: Math.PI, length: 90, radius: 36, speed: -1.3, hitType: null }
+        ];
+
+        function resetBoards() {
+            target3D.hitType = null;
+            movingTargets.forEach(mt => mt.hitType = null);
+            pendulums.forEach(p => p.hitType = null);
+            stuckArrows = [];
+        }
+
+        let windParticles = [];
+        for (let i = 0; i < 30; i++) {
+            windParticles.push({
+                x: Math.random() * 1000,
+                y: Math.random() * 300,
+                speed: Math.random() * 2 + 1,
+                alpha: Math.random() * 0.5 + 0.2
+            });
+        }
+
+        let flyingArrow = null;
+        let stuckArrows = [];
+        let particles = [];
+
+        let clouds = [
+            { x: 120, y: 70, speed: 0.2, scale: 1.1 },
+            { x: 550, y: 40, speed: 0.15, scale: 0.7 },
+            { x: 950, y: 100, speed: 0.25, scale: 1.4 }
+        ];
+
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'draw') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(80, now);
+                    osc.frequency.exponentialRampToValueAtTime(280, now + 0.5);
+                    gain.gain.setValueAtTime(0.03, now);
+                    gain.gain.linearRampToValueAtTime(0.1, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else if (type === 'release') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'hit') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            currentPullPos = { x: canvas.width / 2, y: canvas.height * 0.78 };
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function setGameMode(mode) {
+            gameMode = mode;
+            const btn1P = document.getElementById('mode1PBtn');
+            const btn2P = document.getElementById('mode2PBtn');
+            if (mode === '1P') {
+                btn1P.className = 'py-3 bg-amber-500 text-slate-950 font-extrabold rounded-xl shadow-md transition text-sm border-2 border-amber-400';
+                btn2P.className = 'py-3 bg-slate-800 text-slate-300 font-bold rounded-xl shadow-md transition text-sm border border-slate-700 hover:bg-slate-700';
+            } else {
+                btn2P.className = 'py-3 bg-amber-500 text-slate-950 font-extrabold rounded-xl shadow-md transition text-sm border-2 border-amber-400';
+                btn1P.className = 'py-3 bg-slate-800 text-slate-300 font-bold rounded-xl shadow-md transition text-sm border border-slate-700 hover:bg-slate-700';
+            }
+        }
+
+        function openPauseMenu() {
+            if (!gameActive) return;
+            isPaused = true;
+            pauseOverlay.classList.remove('hidden');
+        }
+
+        function resumeGame() {
+            isPaused = false;
+            pauseOverlay.classList.add('hidden');
+        }
+
+        function restartToMenu() {
+            isPaused = false;
+            pauseOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+            startOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            startOverlay.style.display = 'flex';
+            gameActive = false;
+        }
+
+        function startGame() {
+            initAudio();
+            p1Score = 0;
+            aiScore = 0;
+            p1ShotsTaken = 0;
+            coins = 100;
+            round = 1;
+            arrowsLeft = 5;
+            currentPlayer = 1;
+            comboStreak = 0;
+            flyingArrow = null;
+            particles = [];
+            resetBoards();
+            upgrades = { swayLevel: 0, eagleLevel: 0, pendulumLevel: 0 };
+            upgradeCosts = { sway: 50, eagle: 75, pendulum: 60 };
+            generateNewWind();
+            updateUI();
+
+            startOverlay.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => startOverlay.style.display = 'none', 300);
+            gameOverOverlay.classList.add('hidden');
+            gameFooter.classList.remove('hidden');
+            gameActive = true;
+        }
+
+        function startNextRound() {
+            round++;
+            arrowsLeft = 5;
+            currentPlayer = 1;
+            comboStreak = 0;
+            flyingArrow = null;
+            particles = [];
+            resetBoards();
+            generateNewWind();
+            updateUI();
+
+            gameOverOverlay.classList.add('hidden');
+            gameFooter.classList.remove('hidden');
+            gameActive = true;
+        }
+
+        function generateNewWind() {
+            wind = Number(((Math.random() * 4 - 2.0) * (1 + (round - 1) * 0.3)).toFixed(1));
+            const windDir = wind > 0 ? '→' : (wind < 0 ? '←' : '•');
+            windValEl.textContent = `${Math.abs(wind)} m/s ${windDir}`;
+        }
+
+        function updateUI() {
+            let activeScore = (gameMode === '2P' && currentPlayer === 2) ? aiScore : p1Score;
+            scoreLabelText.textContent = (gameMode === '2P') ? (currentPlayer === 1 ? 'P1 Score:' : 'AI Score:') : 'Score:';
+            scoreValEl.textContent = activeScore;
+            coinsValEl.textContent = coins;
+            finalCoinsVal.textContent = coins;
+            finalScoreVal.textContent = activeScore;
+            arrowsValEl.textContent = arrowsLeft;
+            roundValEl.textContent = round;
+
+            if (comboStreak > 1) {
+                comboContainer.classList.remove('hidden');
+                comboValEl.textContent = comboStreak;
+            } else {
+                comboContainer.classList.add('hidden');
+            }
+
+            document.getElementById('costSway').textContent = upgradeCosts.sway;
+            document.getElementById('costEagle').textContent = upgradeCosts.eagle;
+            document.getElementById('costPendulum').textContent = upgradeCosts.pendulum;
+        }
+
+        function buyUpgrade(type) {
+            let costKey = type;
+            let levelKey = type + 'Level';
+            let cost = upgradeCosts[costKey];
+
+            if (coins >= cost) {
+                coins -= cost;
+                upgrades[levelKey]++;
+                upgradeCosts[costKey] = Math.round(cost * 1.5);
+                updateUI();
+                playSound('hit');
+            }
+        }
+
+        function triggerFocusMode() {
+            if (isDrawing && !isFocusActive && upgrades.eagleLevel > 0 && currentPlayer === 1) {
+                isFocusActive = true;
+                focusTimer = 240;
+                focusBtn.classList.add('bg-amber-500', 'text-slate-950');
+                focusBtn.textContent = '⚡ Focused!';
+            }
+        }
+
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        canvas.addEventListener('mousedown', onPointerDown);
+        canvas.addEventListener('touchstart', onPointerDown);
+        canvas.addEventListener('mousemove', onPointerMove);
+        canvas.addEventListener('touchmove', onPointerMove);
+        canvas.addEventListener('mouseup', onPointerUp);
+        canvas.addEventListener('touchend', onPointerUp);
+
+        function onPointerDown(e) {
+            if (!gameActive || isPaused || flyingArrow || arrowsLeft <= 0 || currentPlayer === 2) return;
+            const pos = getPointerPos(e);
+            const anchorX = canvas.width / 2;
+            const anchorY = canvas.height * 0.78;
+
+            if (Math.hypot(pos.x - anchorX, pos.y - anchorY) < 220) {
+                isDrawing = true;
+                isFocusActive = false;
+
+                if (upgrades.eagleLevel > 0) {
+                    focusBtn.classList.remove('hidden', 'bg-amber-500', 'text-slate-950');
+                    focusBtn.classList.add('bg-sky-600/90', 'text-white');
+                    focusBtn.textContent = '👁️ Eagle Eye Focus';
+                }
+
+                playSound('draw');
+                currentPullPos = pos;
+                inputTargetOffsetX = 0;
+                inputTargetOffsetY = 0;
+                coaxOffsetX = 0;
+                coaxOffsetY = 0;
+            }
+        }
+
+        function onPointerMove(e) {
+            if (!isDrawing || isPaused || !gameActive || currentPlayer === 2) return;
+            const pos = getPointerPos(e);
+            const anchorX = canvas.width / 2;
+            const anchorY = canvas.height * 0.78;
+
+            let dx = pos.x - anchorX;
+            let dy = pos.y - anchorY;
+            let dist = Math.hypot(dx, dy);
+
+            if (dist > maxDrawDistance) {
+                dx = (dx / dist) * maxDrawDistance;
+                dy = (dy / dist) * maxDrawDistance;
+            }
+            if (dy < 15) dy = 15;
+
+            currentPullPos = { x: anchorX + dx, y: anchorY + dy };
+            drawPower = Math.min(1, Math.hypot(dx, dy) / maxDrawDistance);
+
+            inputTargetOffsetX = (dx / maxDrawDistance) * 75;
+            inputTargetOffsetY = (dy / maxDrawDistance) * 50 - 25;
+        }
+
+        function onPointerUp(e) {
+            if (!isDrawing || isPaused || !gameActive || currentPlayer === 2) return;
+            isDrawing = false;
+            focusBtn.classList.add('hidden');
+
+            const anchorX = canvas.width / 2;
+            const anchorY = canvas.height * 0.78;
+            const pullDist = Math.hypot(currentPullPos.x - anchorX, currentPullPos.y - anchorY);
+
+            if (pullDist > 40) {
+                fireArrow(drawPower);
+                arrowsLeft--;
+                p1ShotsTaken++;
+                updateUI();
+                playSound('release');
+            }
+            currentPullPos = { x: anchorX, y: anchorY };
+            drawPower = 0;
+            inputTargetOffsetX = 0;
+            inputTargetOffsetY = 0;
+        }
+
+        function fireArrow(power) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2 + target3D.y;
+
+            let windOffset = (wind * 12) * Math.max(0.1, 1 - (upgrades.swayLevel * 0.3));
+            if (isFocusActive) windOffset = 0;
+
+            const finalTargetX = centerX + coaxOffsetX + windOffset;
+            const finalTargetY = centerY + coaxOffsetY;
+
+            flyingArrow = {
+                startX: canvas.width / 2,
+                startY: canvas.height * 0.78,
+                targetX: finalTargetX,
+                targetY: finalTargetY,
+                currentX: canvas.width / 2,
+                currentY: canvas.height * 0.78,
+                progress: 0,
+                speed: 0.07 + (power * 0.04),
+                power: power
+            };
+        }
+
+        // Skill-Matched AI Turn Logic
+        function triggerAiTurn() {
+            if (gameMode !== '2P' || currentPlayer !== 2 || arrowsLeft <= 0) return;
+            
+            aiStatusBanner.classList.remove('hidden');
+            aiStatusBanner.textContent = "🤖 AI Opponent is syncing to your exact skill level...";
+
+            setTimeout(() => {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2 + target3D.y;
+                
+                let possibleTargets = [];
+                if (!target3D.hitType) possibleTargets.push({ x: centerX, y: centerY, radius: target3D.radius });
+                
+                movingTargets.forEach(mt => {
+                    if (!mt.hitType) possibleTargets.push({ x: centerX + mt.x, y: centerY + mt.y, radius: mt.radius });
+                });
+                
+                pendulums.forEach(p => {
+                    let pX = centerX + Math.sin(p.angle) * p.length;
+                    let pY = (centerY - 80) + Math.cos(p.angle) * p.length;
+                    if (!p.hitType) possibleTargets.push({ x: pX, y: pY, radius: p.radius });
+                });
+
+                if (possibleTargets.length === 0) {
+                    possibleTargets.push({ x: centerX, y: centerY, radius: target3D.radius });
+                }
+
+                let chosenTarget = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+
+                let playerAvgScore = p1ShotsTaken > 0 ? (p1Score / p1ShotsTaken) : 60;
+                let exactParSpread = Math.max(2, 22 - (playerAvgScore / 100) * 20);
+
+                const aiErrorX = (Math.random() - 0.5) * exactParSpread;
+                const aiErrorY = (Math.random() - 0.5) * exactParSpread;
+
+                const finalAiX = chosenTarget.x + aiErrorX;
+                const finalAiY = chosenTarget.y + aiErrorY;
+
+                aiStatusBanner.textContent = "🤖 AI shoots on exact par with your skill!";
+
+                flyingArrow = {
+                    startX: canvas.width / 2,
+                    startY: canvas.height * 0.78,
+                    targetX: finalAiX,
+                    targetY: finalAiY,
+                    currentX: canvas.width / 2,
+                    currentY: canvas.height * 0.78,
+                    progress: 0,
+                    speed: 0.09,
+                    power: 0.95
+                };
+                arrowsLeft--;
+            }, 1200);
+        }
+
+        function showScorePopup(text, colorClass) {
+            scorePopup.textContent = text;
+            scorePopup.className = `absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-100 transition-all duration-300 text-2xl md:text-3xl font-black drop-shadow-2xl z-20 ${colorClass}`;
+            scorePopup.style.transition = 'none';
+            scorePopup.style.transform = 'translate(-50%, -50%) scale(1.3)';
+            
+            setTimeout(() => {
+                scorePopup.style.transition = 'all 0.6s ease-out';
+                scorePopup.style.transform = 'translate(-50%, -140%) scale(1)';
+                scorePopup.style.opacity = '0';
+            }, 50);
+        }
+
+        function drawArcheryBoard(centerX, centerY, r, hitType) {
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, r + 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#78350f';
+            ctx.stroke();
+
+            for (let i = 10; i >= 1; i--) {
+                const curR = (i / 10) * r;
+                if (hitType === 'green') {
+                    ctx.fillStyle = i % 2 === 0 ? '#10b981' : '#34d399';
+                } else if (hitType === 'orange') {
+                    ctx.fillStyle = i % 2 === 0 ? '#f59e0b' : '#fbbf24';
+                } else if (hitType === 'red') {
+                    ctx.fillStyle = i % 2 === 0 ? '#ef4444' : '#f87171';
+                } else {
+                    if (i === 10 || i === 9) ctx.fillStyle = (i === 10) ? '#fbbf24' : '#dc2626';
+                    else if (i === 8 || i === 7) ctx.fillStyle = '#2563eb';
+                    else if (i === 6 || i === 5) ctx.fillStyle = '#000000';
+                    else ctx.fillStyle = '#ffffff';
+                }
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, curR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#475569';
+                ctx.stroke();
+            }
+        }
+
+        function calculateScore(hitX, hitY) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2 + target3D.y;
+
+            for (let p of pendulums) {
+                let pX = centerX + Math.sin(p.angle) * p.length;
+                let pY = (centerY - 80) + Math.cos(p.angle) * p.length;
+                let dist = Math.hypot(hitX - pX, hitY - pY);
+                if (dist <= p.radius) {
+                    if (p.hitType === null) {
+                        let hitType, pts, coins, label, color;
+                        if (dist <= p.radius * 0.3) {
+                            hitType = 'green'; pts = 100; coins = 80; label = '🟢 BULLSEYE! GREEN (+100)'; color = 'text-emerald-400 animate-bounce';
+                        } else if (dist <= p.radius * 0.65) {
+                            hitType = 'orange'; pts = 60; coins = 50; label = '🟠 MIDDLE RING! ORANGE (+60)'; color = 'text-amber-400 animate-bounce';
+                        } else {
+                            hitType = 'red'; pts = 30; coins = 30; label = '🔴 BOARD HIT! RED (+30)'; color = 'text-red-400 animate-bounce';
+                        }
+                        p.hitType = hitType;
+                        comboStreak++;
+                        screenShakeFrames = 10;
+                        let mult = Math.min(3, comboStreak);
+                        playSound('hit');
+                        return { pts: pts * mult, coins: coins * mult, label: `${label} x${mult}`, color: color };
+                    } else {
+                        return { pts: 0, coins: 0, label: `✔️ BOARD ALREADY HIT!`, color: 'text-yellow-400' };
+                    }
+                }
+            }
+
+            for (let mt of movingTargets) {
+                let mtX = centerX + mt.x;
+                let mtY = centerY + mt.y;
+                let dist = Math.hypot(hitX - mtX, hitY - mtY);
+                if (dist <= mt.radius) {
+                    if (mt.hitType === null) {
+                        let hitType, pts, coins, label, color;
+                        if (dist <= mt.radius * 0.3) {
+                            hitType = 'green'; pts = 100; coins = 80; label = '🟢 BULLSEYE! GREEN (+100)'; color = 'text-emerald-400 animate-bounce';
+                        } else if (dist <= mt.radius * 0.65) {
+                            hitType = 'orange'; pts = 60; coins = 50; label = '🟠 MIDDLE RING! ORANGE (+60)'; color = 'text-amber-400 animate-bounce';
+                        } else {
+                            hitType = 'red'; pts = 30; coins = 30; label = '🔴 BOARD HIT! RED (+30)'; color = 'text-red-400 animate-bounce';
+                        }
+                        mt.hitType = hitType;
+                        comboStreak++;
+                        screenShakeFrames = 8;
+                        let mult = Math.min(3, comboStreak);
+                        playSound('hit');
+                        return { pts: pts * mult, coins: coins * mult, label: `${label} x${mult}`, color: color };
+                    } else {
+                        return { pts: 0, coins: 0, label: `✔️ BOARD ALREADY HIT!`, color: 'text-yellow-400' };
+                    }
+                }
+            }
+
+            let centerDist = Math.hypot(hitX - centerX, hitY - centerY);
+            let r = target3D.radius;
+            if (centerDist <= r) {
+                if (target3D.hitType === null) {
+                    let hitType, pts, coins, label, color;
+                    if (centerDist <= r * 0.3) {
+                        hitType = 'green'; pts = 100; coins = 80; label = '🟢 CENTER BULLSEYE! GREEN (+100)'; color = 'text-emerald-400 animate-bounce';
+                    } else if (centerDist <= r * 0.65) {
+                        hitType = 'orange'; pts = 60; coins = 50; label = '🟠 CENTER MIDDLE! ORANGE (+60)'; color = 'text-amber-400 animate-bounce';
+                    } else {
+                        hitType = 'red'; pts = 30; coins = 30; label = '🔴 CENTER BOARD! RED (+30)'; color = 'text-red-400 animate-bounce';
+                    }
+                    target3D.hitType = hitType;
+                    comboStreak++;
+                    screenShakeFrames = 6;
+                    let mult = Math.min(3, comboStreak);
+                    playSound('hit');
+                    return { pts: pts * mult, coins: coins * mult, label: `${label} x${mult}`, color: color };
+                } else {
+                    return { pts: 0, coins: 0, label: `✔️ CENTER BOARD ALREADY HIT!`, color: 'text-yellow-400' };
+                }
+            } else {
+                comboStreak = 0;
+                return { pts: 0, coins: 0, label: '❌ MISS!', color: 'text-red-500' };
+            }
+        }
+
+        function spawnImpactParticles(x, y) {
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 6 + 2;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    decay: Math.random() * 0.04 + 0.02,
+                    color: '#fbbf24',
+                    size: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function checkRoundEnd() {
+            if (arrowsLeft <= 0) {
+                gameFooter.classList.add('hidden');
+                focusBtn.classList.add('hidden');
+                aiStatusBanner.classList.add('hidden');
+
+                if (gameMode === '2P' && currentPlayer === 1) {
+                    currentPlayer = 2;
+                    arrowsLeft = 5;
+                    comboStreak = 0;
+                    resetBoards(); // Resets boards and clears stuck arrows for AI turn!
+                    gameOverTitle.textContent = "Player 1 Turn Complete!";
+                    gameOverDesc.textContent = "Now passing bow to AI Opponent...";
+                    finalScoreVal.textContent = p1Score;
+                    restartBtn.textContent = "Start AI Turn 🤖";
+                    gameOverOverlay.classList.remove('hidden');
+                    gameActive = false;
+                    return;
+                }
+
+                let currentActiveScore = (gameMode === '2P') ? (currentPlayer === 1 ? p1Score : aiScore) : p1Score;
+                let passedGoal = currentActiveScore >= 150;
+
+                if (round < 3) {
+                    if (passedGoal) {
+                        gameOverTitle.textContent = gameMode === '2P' ? `Round ${round} Summary (P1: ${p1Score} vs AI: ${aiScore})` : `Round ${round} Cleared! (150+ Achieved)`;
+                        gameOverDesc.textContent = `Fantastic shooting! Spend your coins in the Pro Armory below.`;
+                        restartBtn.textContent = `Next Level ➡️`;
+                    } else {
+                        gameOverTitle.textContent = `Round ${round} Failed (Under 150 Pts)`;
+                        gameOverDesc.textContent = `You scored ${currentActiveScore} pts. You need at least 150 points to advance!`;
+                        restartBtn.textContent = `Try Round Again 🔄`;
+                    }
+                    updateUI();
+                    gameOverOverlay.classList.remove('hidden');
+                    gameActive = false;
+                } else {
+                    let winText = gameMode === '2P' ? (p1Score > aiScore ? "🏆 Player 1 Wins!" : "🤖 AI Opponent Wins!") : (passedGoal ? "🏆 Archery Master Champion!" : "❌ Goal Not Met (< 150 Pts)");
+                    gameOverTitle.textContent = winText;
+                    gameOverDesc.textContent = `Final Scores -> P1: ${p1Score} | AI: ${aiScore}`;
+                    updateUI();
+                    restartBtn.textContent = "Play Again";
+                    gameOverOverlay.classList.remove('hidden');
+                    gameActive = false;
+                }
+            } else if (gameMode === '2P' && currentPlayer === 2) {
+                setTimeout(triggerAiTurn, 1000);
+            }
+        }
+
+        restartBtn.addEventListener('click', () => {
+            if (gameMode === '2P' && currentPlayer === 2 && arrowsLeft === 5 && stuckArrows.length === 0) {
+                gameOverOverlay.classList.add('hidden');
+                gameActive = true;
+                setTimeout(triggerAiTurn, 800);
+                return;
+            }
+            if (round >= 3 && arrowsLeft <= 0) {
+                startGame();
+            } else if (arrowsLeft <= 0) {
+                startNextRound();
+            }
+        });
+
+        backToMenuBtn.addEventListener('click', restartToMenu);
+        startBtn.addEventListener('click', startGame);
+
+        function drawEnvironment() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            const sky = ctx.createLinearGradient(0, 0, 0, h * 0.55);
+            sky.addColorStop(0, '#0284c7');
+            sky.addColorStop(0.4, '#38bdf8');
+            sky.addColorStop(1, '#e0f2fe');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, w, h * 0.55);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1.5;
+            windParticles.forEach(wp => {
+                wp.x += wind * 1.5;
+                if (wp.x > w) wp.x = 0;
+                if (wp.x < 0) wp.x = w;
+                ctx.beginPath();
+                ctx.moveTo(wp.x, wp.y);
+                ctx.lineTo(wp.x + (wind * 12), wp.y);
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+            clouds.forEach(cloud => {
+                cloud.x += cloud.speed;
+                if (cloud.x > w + 150) cloud.x = -150;
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, 35 * cloud.scale, 0, Math.PI * 2);
+                ctx.arc(cloud.x + 25 * cloud.scale, cloud.y - 15 * cloud.scale, 28 * cloud.scale, 0, Math.PI * 2);
+                ctx.arc(cloud.x + 55 * cloud.scale, cloud.y, 32 * cloud.scale, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.fillStyle = '#065f46';
+            ctx.beginPath();
+            ctx.moveTo(0, h * 0.55);
+            ctx.lineTo(0, h * 0.4);
+            ctx.quadraticCurveTo(w * 0.3, h * 0.3, w * 0.6, h * 0.42);
+            ctx.quadraticCurveTo(w * 0.85, h * 0.48, w, h * 0.36);
+            ctx.lineTo(w, h * 0.55);
+            ctx.fill();
+
+            const ground = ctx.createLinearGradient(0, h * 0.55, 0, h);
+            ground.addColorStop(0, '#10b981');
+            ground.addColorStop(0.3, '#059669');
+            ground.addColorStop(1, '#022c22');
+            ctx.fillStyle = ground;
+            ctx.fillRect(0, h * 0.55, w, h * 0.45);
+        }
+
+        function drawTarget() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerX = w / 2;
+            const centerY = h / 2 + target3D.y;
+
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY + target3D.radius);
+            ctx.lineTo(centerX - 55, h * 0.59);
+            ctx.moveTo(centerX, centerY + target3D.radius);
+            ctx.lineTo(centerX + 55, h * 0.59);
+            ctx.moveTo(centerX, centerY + target3D.radius);
+            ctx.lineTo(centerX, h * 0.61);
+            ctx.stroke();
+
+            drawArcheryBoard(centerX, centerY, target3D.radius, target3D.hitType);
+
+            if (gameActive && !isPaused) {
+                time += 0.016;
+                let damperMult = Math.max(0.2, 1 - (upgrades.pendulumLevel * 0.35));
+
+                movingTargets.forEach(mt => {
+                    mt.x += mt.vx * (1 + (round - 1) * 0.2);
+                    if (mt.x > w / 2 + 180) mt.x = -w / 2 - 180;
+                    if (mt.x < -w / 2 - 180) mt.x = w / 2 + 180;
+                });
+
+                pendulums.forEach((p, idx) => {
+                    p.angle = Math.sin(time * (p.speed * damperMult) + idx) * 1.35;
+                });
+            }
+
+            movingTargets.forEach(mt => {
+                let mtScreenX = centerX + mt.x;
+                let mtScreenY = centerY + mt.y;
+                drawArcheryBoard(mtScreenX, mtScreenY, mt.radius, mt.hitType);
+            });
+
+            pendulums.forEach(p => {
+                const pivotX = centerX;
+                const pivotY = centerY - 80;
+                const bobX = pivotX + Math.sin(p.angle) * p.length;
+                const bobY = pivotY + Math.cos(p.angle) * p.length;
+
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(pivotX, pivotY);
+                ctx.lineTo(bobX, bobY);
+                ctx.stroke();
+
+                drawArcheryBoard(bobX, bobY, p.radius, p.hitType);
+            });
+
+            stuckArrows.forEach(arrow => {
+                ctx.save();
+                ctx.translate(arrow.x, arrow.y);
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillRect(-2, -3, 4, 18);
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.moveTo(-2, 18);
+                ctx.lineTo(-8, 28);
+                ctx.lineTo(-2, 22);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function drawFirstPersonBowAndPOV() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const anchorX = w / 2;
+            const anchorY = h * 0.78;
+
+            if (gameActive && !isPaused) {
+                const targetCoaxX = inputTargetOffsetX;
+                const targetCoaxY = inputTargetOffsetY;
+
+                coaxOffsetX += (targetCoaxX - coaxOffsetX) * 0.2;
+                coaxOffsetY += (targetCoaxY - coaxOffsetY) * 0.2;
+            }
+
+            const nockX = isDrawing ? currentPullPos.x : anchorX;
+            const nockY = isDrawing ? currentPullPos.y : anchorY;
+
+            ctx.save();
+            const riserGrad = ctx.createLinearGradient(anchorX - 35, anchorY, anchorX + 35, anchorY);
+            riserGrad.addColorStop(0, '#1e293b');
+            riserGrad.addColorStop(0.3, '#334155');
+            riserGrad.addColorStop(0.5, upgrades.eagleLevel > 0 ? '#3b82f6' : '#b45309');
+            riserGrad.addColorStop(0.7, '#334155');
+            riserGrad.addColorStop(1, '#1e293b');
+            
+            ctx.fillStyle = riserGrad;
+            ctx.beginPath();
+            ctx.roundRect(anchorX - 22, anchorY - 40, 44, 130, 16);
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#0f172a';
+            ctx.stroke();
+
+            ctx.strokeStyle = upgrades.eagleLevel > 0 ? '#60a5fa' : '#f59e0b';
+            ctx.lineWidth = 14;
+            ctx.beginPath();
+            ctx.moveTo(anchorX - 20, anchorY - 30);
+            ctx.quadraticCurveTo(anchorX - 320, anchorY - 180, anchorX - 380, anchorY - 350);
+            ctx.moveTo(anchorX + 20, anchorY - 30);
+            ctx.quadraticCurveTo(anchorX + 320, anchorY - 180, anchorX + 380, anchorY - 350);
+            ctx.stroke();
+
+            ctx.lineWidth = isDrawing ? 3.5 : 2;
+            ctx.strokeStyle = isDrawing ? '#fbbf24' : '#94a3b8';
+            ctx.beginPath();
+            ctx.moveTo(anchorX - 380, anchorY - 350);
+            ctx.lineTo(nockX, nockY);
+            ctx.lineTo(anchorX + 380, anchorY - 350);
+            ctx.stroke();
+
+            let windOffset = (wind * 12) * Math.max(0.1, 1 - (upgrades.swayLevel * 0.3));
+            if (isFocusActive) windOffset = 0;
+
+            const tipX = anchorX + coaxOffsetX + windOffset;
+            const tipY = (h / 2 + target3D.y) + coaxOffsetY;
+
+            ctx.lineWidth = isDrawing ? 6 : 5;
+            ctx.strokeStyle = '#451a03';
+            ctx.beginPath();
+            ctx.moveTo(nockX, nockY);
+            ctx.lineTo(anchorX + (coaxOffsetX * 0.2), anchorY - 120);
+            ctx.stroke();
+
+            ctx.fillStyle = upgrades.pendulumLevel > 0 ? '#34d399' : '#e2e8f0';
+            ctx.beginPath();
+            ctx.moveTo(anchorX - 4, anchorY - 115);
+            ctx.lineTo(anchorX + 4, anchorY - 115);
+            ctx.lineTo(anchorX, anchorY - 138);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(nockX - 5, nockY);
+            ctx.lineTo(nockX - 15, nockY + 16);
+            ctx.lineTo(nockX, nockY + 10);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+            if (gameActive && !isPaused && currentPlayer === 1) {
+                const cx = tipX;
+                const cy = tipY;
+
+                ctx.save();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = isFocusActive ? '#fbbf24' : (isDrawing ? '#ef4444' : '#38bdf8');
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(cx - 30, cy); ctx.lineTo(cx - 10, cy);
+                ctx.moveTo(cx + 10, cy); ctx.lineTo(cx + 30, cy);
+                ctx.moveTo(cx, cy - 30); ctx.lineTo(cx, cy - 10);
+                ctx.moveTo(cx, cy + 10); ctx.lineTo(cx, cy + 30);
+                ctx.stroke();
+
+                ctx.fillStyle = isFocusActive ? '#fbbf24' : (isDrawing ? '#ef4444' : '#38bdf8');
+                ctx.beginPath();
+                ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life -= p.decay;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function updateAndDrawFlyingArrow() {
+            if (!flyingArrow || isPaused) return;
+
+            flyingArrow.progress += flyingArrow.speed;
+            const t = flyingArrow.progress;
+
+            flyingArrow.currentX = flyingArrow.startX + (flyingArrow.targetX - flyingArrow.startX) * t;
+            flyingArrow.currentY = (flyingArrow.startY + (flyingArrow.targetY - flyingArrow.startY) * t) - Math.sin(t * Math.PI) * 55;
+
+            const scale = Math.max(0.05, 1 - (t * 0.9));
+            ctx.save();
+            ctx.translate(flyingArrow.currentX, flyingArrow.currentY);
+            ctx.scale(scale, scale);
+
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(-2, -25, 4, 50);
+            ctx.fillStyle = '#e2e8f0';
+            ctx.beginPath();
+            ctx.moveTo(-5, -25);
+            ctx.lineTo(5, -25);
+            ctx.lineTo(0, -42);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+            if (t >= 1) {
+                const hitResult = calculateScore(flyingArrow.targetX, flyingArrow.targetY);
+                if (currentPlayer === 1) {
+                    p1Score += hitResult.pts;
+                    coins += hitResult.coins;
+                } else {
+                    aiScore += hitResult.pts;
+                }
+                
+                showScorePopup(hitResult.label, hitResult.color);
+                spawnImpactParticles(flyingArrow.targetX, flyingArrow.targetY);
+
+                stuckArrows.push({
+                    x: flyingArrow.targetX,
+                    y: flyingArrow.targetY
+                });
+
+                flyingArrow = null;
+                updateUI();
+                checkRoundEnd();
+            }
+        }
+
+        function gameLoop() {
+            ctx.save();
+            if (screenShakeFrames > 0) {
+                screenShakeFrames--;
+                const shakeX = (Math.random() - 0.5) * 10;
+                const shakeY = (Math.random() - 0.5) * 10;
+                ctx.translate(shakeX, shakeY);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawEnvironment();
+            drawTarget();
+            updateAndDrawParticles();
+            updateAndDrawFlyingArrow();
+            drawFirstPersonBowAndPOV();
+
+            ctx.restore();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function() {
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
